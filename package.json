@@ -1,0 +1,16 @@
+{
+  "name": "zeigo-renewal-proposals",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --configLoader native --host 127.0.0.1",
+    "build": "tsc -b && vite build --configLoader native",
+    "build:pages": "tsc -b && vite build --configLoader native --base=/zeigo-sample/",
+    "preview": "vite preview --configLoader native --host 127.0.0.1",
+    "check:browser": "node scripts/check-browser.mjs",
+    "test": "node --test scripts/founding.test.mjs"
+  },
+  "dependencies": { "react": "^19.2.0", "react-dom": "^19.2.0", "lucide-react": "^0.468.0" },
+  "devDependencies": { "@types/react": "^19.2.0", "@types/react-dom": "^19.2.0", "@vitejs/plugin-react": "^5.0.0", "typescript": "^5.9.0", "vite": "^7.1.0", "@playwright/test": "^1.56.0" }
+}

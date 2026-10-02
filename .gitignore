@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.reference/
+test-results/
+*.log
+.npm-cache/
+.cache/
+*.tsbuildinfo

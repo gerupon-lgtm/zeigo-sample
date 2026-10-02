@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "shop": {
+    "name": "田舎家",
+    "reading": "ぜいご",
+    "founded": "昭和54年創業",
+    "foundedYear": 1979,
+    "foundedDate": null,
+    "address": "三重県鈴鹿市安塚町須田100-1",
+    "phone": "059-382-4603",
+    "hours": "11:00–22:00",
+    "lateHours": "土曜日 11:00–24:00",
+    "closed": "毎月第2水曜日・元旦（変更の場合あり）",
+    "parking": "28台",
+    "instagram": "https://www.instagram.com/zeigo.suzuka/"
+  },
+  "photos": { "hero": "/images/soba-hero.png", "udon": "/images/udon.png", "exterior": "/images/1.jpg", "interior": "/images/img4.jpg" },
+  "menu": [
+    { "id": "u1", "category": "うどん", "name": "かけうどん", "price": 640 },
+    { "id": "u2", "category": "うどん", "name": "きつねうどん", "price": 750 },
+    { "id": "u3", "category": "うどん", "name": "天ぷらうどん", "price": 1150 },
+    { "id": "u4", "category": "うどん", "name": "カレーうどん", "price": 990 },
+    { "id": "u5", "category": "うどん", "name": "ざるうどん", "price": 710 },
+    { "id": "u6", "category": "うどん", "name": "みそ煮込みうどん", "price": 990 },
+    { "id": "s1", "category": "そば", "name": "ざるそば", "price": 860 },
+    { "id": "s2", "category": "そば", "name": "天ざるそば", "price": 1300 },
+    { "id": "s3", "category": "そば", "name": "かけそば", "price": 790 },
+    { "id": "s4", "category": "そば", "name": "山かけそば", "price": 1090 },
+    { "id": "s5", "category": "そば", "name": "天ぷらそば", "price": 1300 },
+    { "id": "s6", "category": "そば", "name": "ざるとろろそば", "price": 1260 },
+    { "id": "d1", "category": "丼・定食", "name": "かつ丼", "price": 990 },
+    { "id": "d2", "category": "丼・定食", "name": "かつ丼セット", "price": 1260 },
+    { "id": "d3", "category": "丼・定食", "name": "天丼セット", "price": 1590 },
+    { "id": "d4", "category": "丼・定食", "name": "うどん定食", "price": 890 },
+    { "id": "d5", "category": "丼・定食", "name": "田舎家麦とろろ定食", "price": 1400 },
+    { "id": "d6", "category": "丼・定食", "name": "とんかつ定食", "price": 1730 },
+    { "id": "g1", "category": "寿司・御膳", "name": "にぎり寿司定食", "price": 1810 },
+    { "id": "g2", "category": "寿司・御膳", "name": "天ざるそば膳", "price": 2530 },
+    { "id": "g3", "category": "寿司・御膳", "name": "麦とろろ膳", "price": 2530 },
+    { "id": "g4", "category": "寿司・御膳", "name": "にぎり寿司膳", "price": 2880 },
+    { "id": "k1", "category": "会席", "name": "田舎家ミニ会席", "price": 3850, "note": "要予約" },
+    { "id": "k2", "category": "会席", "name": "田舎家会席（竹）", "price": 5280, "note": "要予約" }
+  ],
+  "news": [
+    { "id": "n1", "date": "2026.10.01", "label": "お店から", "title": "安心してご利用いただくために", "body": "当店では、お客さまに気持ちよくお過ごしいただけるよう努めるとともに、スタッフが安心して働ける環境も大切にしております。お客さまからのご意見やご要望には、これからも誠実に対応してまいります。ほかのお客さまやスタッフにご負担となる行為につきましては、状況により対応を控えさせていただく場合がございます。皆さまのご理解とご協力をお願いいたします。" }
+  ]
+}
