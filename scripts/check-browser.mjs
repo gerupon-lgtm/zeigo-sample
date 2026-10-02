@@ -53,7 +53,7 @@ try {
     await page.setViewportSize({ width: 1440, height: 1050 });
     console.log(`PASS ${design}: 5 responsive widths, navigation, categories, menu sheets, news.`);
   }
-  await page.goto(base);
+  await page.goto(`${base}/`);
   await page.getByRole('button', { name: '3案を比較する', exact: true }).click();
   assert.equal(await page.locator('.compare-card').count(), 3);
   await page.evaluate(() => Promise.all(Array.from(document.querySelectorAll('dialog img')).map(img => img.decode().catch(() => {}))));
