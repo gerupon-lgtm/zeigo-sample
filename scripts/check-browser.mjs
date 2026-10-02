@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 process.env.PLAYWRIGHT_BROWSERS_PATH ??= resolve('.cache/ms-playwright');
 const { chromium } = await import('@playwright/test');
 const browser = await chromium.launch({ headless: true });
-const context = await browser.newContext({ viewport: { width: 1440, height: 1050 }, deviceScaleFactor: 1 });
+const context = await browser.newContext({ viewport: { width: 1440, height: 1050 }, deviceScaleFactor: 1, reducedMotion: 'reduce' });
 const page = await context.newPage();
 const errors = [];
 page.on('pageerror', error => errors.push(error.message));
@@ -29,8 +29,31 @@ try {
       await page.setViewportSize({ width, height: width < 680 ? 844 : 1050 });
       const metrics = await page.evaluate(() => ({ view: innerWidth, body: document.documentElement.scrollWidth }));
       assert.ok(metrics.body <= metrics.view, `${design}: horizontal overflow at ${width}: ${metrics.body}`);
+      const bodySize = await page.locator('.about-body').evaluate(node => parseFloat(getComputedStyle(node).fontSize));
+      const menuSize = await page.locator('.menu-row').first().evaluate(node => parseFloat(getComputedStyle(node).fontSize));
+      assert.ok(bodySize >= 16 && menuSize >= 16, `${design}: readable body and menu text at ${width}`);
+      if (width > 900) {
+        await page.evaluate(() => scrollTo(0, 1200));
+        const header = await page.locator('.site-header').boundingBox();
+        const toolbar = await page.locator('.proposal-bar').boundingBox();
+        assert.ok(Math.abs(header.y - (toolbar.y + toolbar.height)) < 2, `${design}: desktop header remains visible at ${width}`);
+        for (const id of ['about', 'menu', 'news', 'access']) {
+          await page.locator(`.desktop-nav a[href="#${id}"]`).click();
+          const target = await page.locator(`#${id}`).boundingBox();
+          const fixedHeader = await page.locator('.site-header').boundingBox();
+          assert.ok(target.y >= fixedHeader.y + fixedHeader.height, `${design}: ${id} is not hidden behind the header at ${width}`);
+        }
+      } else {
+        await page.getByRole('button', { name: 'メニューを開く', exact: true }).click();
+        await page.locator('.mobile-nav').getByRole('link', { name: '田舎家について' }).click();
+        assert.equal(await page.locator('.mobile-nav').count(), 0);
+        const target = await page.locator('#about').boundingBox();
+        const toolbar = await page.locator('.proposal-bar').boundingBox();
+        assert.ok(target.y >= toolbar.y + toolbar.height, `${design}: mobile section jump remains visible at ${width}`);
+      }
       const links = await page.locator('a[href^="tel:"]').count();
       assert.ok(links > 0);
+      await page.evaluate(() => scrollTo(0, 0));
     }
     await page.setViewportSize({ width: 390, height: 844 });
     await page.screenshot({ path: `docs/previews/${design}-mobile.png`, fullPage: true });
@@ -51,7 +74,7 @@ try {
     await page.keyboard.press('Escape');
     assert.equal(await page.locator('dialog').count(), 0);
     await page.setViewportSize({ width: 1440, height: 1050 });
-    console.log(`PASS ${design}: 5 responsive widths, navigation, categories, menu sheets, news.`);
+    console.log(`PASS ${design}: 5 responsive widths, readable text, fixed desktop header, section jumps, mobile navigation, categories, menu sheets, news.`);
   }
   await page.goto(`${base}/`);
   await page.getByRole('button', { name: '3案を比較する', exact: true }).click();
