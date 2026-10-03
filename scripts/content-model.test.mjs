@@ -6,9 +6,18 @@ import ts from 'typescript';
 const dataUrl = source => 'data:text/javascript;base64,' + Buffer.from(ts.transpile(source, { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext })).toString('base64');
 const founding = dataUrl(await readFile(new URL('../src/founding.ts', import.meta.url), 'utf8'));
 const source = (await readFile(new URL('../src/content-model.ts', import.meta.url), 'utf8')).replace("'./founding'", JSON.stringify(founding));
-const { validateContent, displayedNews, contentChanges } = await import(dataUrl(source));
+const { validateContent, displayedNews, contentChanges, MAX_IMPORT_BYTES } = await import(dataUrl(source));
 const original = JSON.parse(await readFile(new URL('../src/content.json', import.meta.url), 'utf8'));
 const article = i => ({ id: `n${i}`, date: `2026-10-${String(i + 1).padStart(2, '0')}`, label: '検証', title: `記事${i}`, body: '検証用の本文', visible: true });
+
+test('a full photo backup fits the JSON import size limit', () => {
+  const c = structuredClone(original);
+  const photo = 'data:image/jpeg;base64,' + 'A'.repeat(1398104);
+  for (const key of Object.keys(c.photos)) c.photos[key] = photo;
+  c.news = Array.from({ length: 20 }, (_, i) => ({ ...article(i), image: photo, body: '文'.repeat(5000) }));
+  assert.equal(validateContent(c), true);
+  assert.ok(Buffer.byteLength(JSON.stringify(c)) < MAX_IMPORT_BYTES);
+});
 
 test('old sample JSON remains readable without new fields', () => {
   const legacy = structuredClone(original); delete legacy.newsMaxItems; delete legacy.newsDisplayLimit;

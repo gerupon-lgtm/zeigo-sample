@@ -7,7 +7,8 @@ export const MAX_MENU_ITEMS = 199;
 export const DEFAULT_NEWS_MAX = 20;
 export const DEFAULT_NEWS_DISPLAY = 10;
 export const MAX_NEWS_ITEMS = 20;
-export const MAX_IMPORT_BYTES = 20 * 1024 * 1024;
+// Covers all 24 allowed images after base64 encoding, plus text and metadata.
+export const MAX_IMPORT_BYTES = 40 * 1024 * 1024;
 const record = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
 const text = (value: unknown, max: number, required = false): value is string => typeof value === 'string' && value.length <= max && (!required || value.trim().length > 0);
 const optionalFlag = (value: unknown) => value === undefined || typeof value === 'boolean';

@@ -65,7 +65,7 @@ export default function Editor({ content, original, onSave, onClose }: { content
     const file = e.target.files?.[0]; if (!file) return;
     setInvalid(false);
     try { if (file.size > MAX_IMPORT_BYTES) throw new Error(); const data: unknown = JSON.parse(await file.text()); if (!validateContent(data)) throw new Error(); setDraft(data); setStatus('内容を読み込みました。「変更を保存」で確認画面へ進めます。'); }
-    catch { setStatus('読み込めるJSONではありません。このデモから書き出した20MB以下のファイルを選び、内容や件数も確認してください。'); setInvalid(true); }
+    catch { setStatus('読み込めるJSONではありません。このデモから書き出した40MB以下のファイルを選び、内容や件数も確認してください。'); setInvalid(true); }
     e.target.value = '';
   }
   function addNews() {
