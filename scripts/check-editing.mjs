@@ -1,0 +1,140 @@
+import assert from 'node:assert/strict';
+import { mkdir } from 'node:fs/promises';
+import { resolve } from 'node:path';
+process.env.PLAYWRIGHT_BROWSERS_PATH ??= resolve('.cache/ms-playwright');
+const { chromium } = await import('@playwright/test');
+const browser = await chromium.launch({ headless: true });
+const context = await browser.newContext({ viewport: { width: 1440, height: 1050 }, reducedMotion: 'reduce' });
+const page = await context.newPage();
+const errors = [];
+page.on('pageerror', error => errors.push(error.message));
+page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
+const base = (process.env.CHECK_URL ?? 'http://127.0.0.1:5173').replace(/\/+$/, '');
+const open = () => page.getByRole('button', { name: '編集デモを開く', exact: true }).click();
+const close = () => page.getByRole('button', { name: '閉じる', exact: true }).click();
+const save = async () => { await page.getByRole('button', { name: '変更を保存', exact: true }).click(); await page.getByRole('button', { name: 'このブラウザに保存', exact: true }).click(); await page.getByRole('status').filter({ hasText: '保存し' }).waitFor(); };
+const tab = name => page.getByRole('tab', { name, exact: true }).click();
+const stored = () => page.evaluate(() => JSON.parse(localStorage.getItem('zeigo-proposal-content-v1')));
+const tinyPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a1l8AAAAASUVORK5CYII=', 'base64');
+await mkdir('.cache/editing-previews', { recursive: true });
+try {
+  await page.goto(base);
+  await open();
+  const first = page.locator('.menu-edit-card[data-id="u1"]');
+  await first.getByLabel('品名', { exact: true }).fill('検証用うどん');
+  await first.getByRole('spinbutton').fill('880');
+  await first.getByRole('button', { name: '下へ', exact: true }).click();
+  await page.locator('.menu-edit-card[data-id="u2"]').getByRole('button', { name: '非表示にする' }).click();
+  await page.getByRole('button', { name: '品を追加する' }).click();
+  const added = page.locator('.menu-edit-card').last();
+  await added.locator('input').first().fill('検証用の追加品');
+  await added.getByRole('spinbutton').fill('990');
+  await page.getByRole('button', { name: '変更を保存', exact: true }).click();
+  assert.match(await page.locator('.change-list').innerText(), /表示順/);
+  assert.equal(await stored(), null, 'review does not save');
+  await page.getByRole('button', { name: '編集へ戻る' }).click();
+  await save(); await close();
+  assert.match(await page.locator('.menu-rows').innerText(), /検証用うどん[\s\S]*¥880/);
+  assert.match(await page.locator('.menu-rows').innerText(), /検証用の追加品/);
+  assert.ok(!(await page.locator('.menu-rows').innerText()).includes('きつねうどん'));
+  await open();
+  await page.locator('.menu-edit-card[data-id="u2"]').getByRole('button', { name: '再表示する' }).click();
+  await save(); await close();
+  assert.match(await page.locator('.menu-row').first().innerText(), /きつねうどん/);
+  await open(); await tab('お知らせ');
+  for (let i = 1; i <= 19; i++) {
+    await page.getByRole('button', { name: 'お知らせを追加する' }).click();
+    const card = page.locator('.news-edit-card').last();
+    await card.getByLabel('日付', { exact: true }).fill(`2026-10-${String(i + 1).padStart(2, '0')}`);
+    await card.getByLabel('タイトル', { exact: true }).fill(`検証記事${i}`);
+    await card.getByLabel('本文', { exact: true }).fill(`これはローカル検証用の記事${i}です。\n本文の改行も確認します。`);
+    if (i === 1) {
+      await card.getByLabel('種類', { exact: true }).fill('キャンペーン');
+      await card.getByLabel('ピックアップ', { exact: true }).check();
+      await card.locator('input[type=file]').setInputFiles({ name: 'news.png', mimeType: 'image/png', buffer: tinyPng });
+      await page.getByRole('status').filter({ hasText: '写真を読み込みました' }).waitFor();
+    }
+    if (i === 19) { await card.getByLabel('表示対象', { exact: true }).uncheck(); await card.getByLabel('ピックアップ', { exact: true }).check(); }
+  }
+  assert.equal(await page.locator('.news-edit-card').count(), 20);
+  assert.equal(await page.getByRole('button', { name: 'お知らせを追加する' }).isDisabled(), true);
+  assert.match(await page.locator('.news-count').innerText(), /保存 20 \/ 20件[\s\S]*トップ表示 10 \/ 10件/);
+  await save(); await close();
+  assert.equal(await page.locator('[data-news-id]').count(), 10);
+  assert.equal(await page.locator('.news-pickup').count(), 1);
+  assert.match(await page.locator('[data-news-id]').first().innerText(), /検証記事1/);
+  assert.ok(!(await page.locator('#news').innerText()).includes('検証記事19'));
+  await page.locator('.news-pickup').click();
+  assert.equal(await page.locator('.article-image').count(), 1);
+  assert.match(await page.locator('.article-body').innerText(), /\n本文の改行/);
+  await close();
+  // Full draft remains intact after storage failure; existing saved data is unchanged.
+  await open(); await tab('お知らせ');
+  const news1 = page.locator('.news-edit-card').filter({ has: page.getByRole('heading', { name: '検証記事1', exact: true }) });
+  await news1.getByLabel('タイトル', { exact: true }).fill('検証記事1 改訂');
+  await page.getByRole('button', { name: '変更を保存', exact: true }).click();
+  await page.evaluate(() => { window.__originalSetItem = Storage.prototype.setItem; Storage.prototype.setItem = () => { throw new DOMException('Full', 'QuotaExceededError'); }; });
+  await page.getByRole('button', { name: 'このブラウザに保存' }).click();
+  await page.getByRole('status').filter({ hasText: '保存容量が足りません' }).waitFor();
+  assert.ok((await stored()).news.some(n => n.title === '検証記事1'));
+  await page.evaluate(() => { Storage.prototype.setItem = window.__originalSetItem; });
+  await page.getByRole('button', { name: '編集へ戻る' }).click();
+  assert.equal(await page.locator('.news-edit-card').getByLabel('タイトル', { exact: true }).nth(1).inputValue(), '検証記事1 改訂');
+  await save(); await close();
+  await page.reload(); assert.equal(await page.locator('[data-news-id]').count(), 10);
+  await open();
+  const downloaded = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'JSONを書き出す' }).click();
+  const stream = await (await downloaded).createReadStream();
+  const chunks = []; for await (const chunk of stream) chunks.push(chunk);
+  const imported = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+  assert.equal(imported.news.length, 20);
+  imported.news[1].image = '/images/udon.png';
+  imported.news[18].title = '長いお知らせのタイトル'.repeat(10);
+  imported.news[18].label = 'LongCategory'.repeat(3);
+  await page.locator('input[accept="application/json,.json"]').setInputFiles({ name: 'content.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(imported)) });
+  await page.getByRole('status').filter({ hasText: '内容を読み込みました' }).waitFor();
+  await save(); await close();
+  await page.locator('.news-pickup img').evaluate(img => img.decode());
+  for (const design of ['shiro', 'ai', 'komorebi']) {
+    await page.goto(`${base}/?design=${design}`);
+    assert.match(await page.locator('.menu-rows').innerText(), /検証用うどん/);
+    assert.equal(await page.locator('[data-news-id]').count(), 10);
+    for (const width of [320, 390, 768, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.locator('#news').scrollIntoViewIfNeeded();
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${design}/${width} public overflow`);
+      await open(); await tab('お知らせ');
+      assert.ok(await page.locator('dialog').evaluate(node => node.scrollWidth <= node.clientWidth), `${design}/${width} editor overflow`);
+      if (width === 390) await page.screenshot({ path: `.cache/editing-previews/${design}-editor-news.png` });
+      await tab('お品書き');
+      if (width === 390) await page.screenshot({ path: `.cache/editing-previews/${design}-editor-menu.png` });
+      await close();
+      if (width === 390) { await page.locator('#news').scrollIntoViewIfNeeded(); await page.screenshot({ path: `.cache/editing-previews/${design}-news.png` }); }
+    }
+  }
+  await open(); await tab('お知らせ');
+  const last = page.locator('.news-edit-card').last();
+  await last.getByLabel('表示対象', { exact: true }).check();
+  await save(); await close();
+  assert.equal(await page.locator('.news-pickup').count(), 2);
+  await open(); await tab('お知らせ');
+  await page.locator('.news-edit-card').last().getByRole('button', { name: '削除する', exact: true }).click();
+  await page.getByRole('button', { name: '削除を確認', exact: true }).click();
+  assert.equal(await page.locator('.news-edit-card').count(), 19);
+  assert.equal(await page.getByRole('button', { name: 'お知らせを追加する' }).isEnabled(), true);
+  await close(); await open(); await tab('お知らせ');
+  assert.equal(await page.locator('.news-edit-card').count(), 20, 'closing discards unconfirmed deletion');
+  await page.locator('.news-edit-card').last().getByRole('button', { name: '削除する', exact: true }).click();
+  await page.getByRole('button', { name: '削除を確認', exact: true }).click();
+  await save(); await close(); assert.equal((await stored()).news.length, 19);
+  const fresh = await browser.newContext(); const freshPage = await fresh.newPage(); await freshPage.goto(base);
+  assert.equal(await freshPage.locator('[data-news-id]').count(), 1, 'content never crosses browsers'); await fresh.close();
+  await open(); await tab('お知らせ');
+  await page.getByRole('button', { name: '初期内容に戻す', exact: true }).first().click();
+  await page.locator('.reset-confirm').getByRole('button', { name: '初期内容に戻す', exact: true }).click();
+  await close(); assert.equal(await page.locator('[data-news-id]').count(), 1);
+  assert.equal(await stored(), null);
+  assert.deepEqual(errors, []);
+  console.log('PASS menu edits/add/hide/restore/order; news 20 stored/10 shown, pickup/photo/detail, edits/reload, review/cancel, storage failure, deletion, browser isolation, 3 designs x 4 widths; zero errors.');
+} finally { await browser.close(); }

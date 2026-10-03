@@ -1,5 +1,7 @@
 {
   "schemaVersion": 1,
+  "newsMaxItems": 20,
+  "newsDisplayLimit": 10,
   "shop": {
     "name": "田舎家",
     "reading": "ぜいご",

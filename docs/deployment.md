@@ -14,7 +14,7 @@
 GitHub PagesのソースはGitHub Actionsです。`.github/workflows/deploy.yml` は `main` へのpush、または手動実行で起動します。
 
 1. Node.js 24で `npm ci`。
-2. `npm test` で創業年数の計算を検証。
+2. `npm test` で創業年数、編集データ、お知らせの件数と表示順を検証。
 3. `npm run build:pages` で `/zeigo-sample/` を基点としてビルド。
 4. `dist/` をPages用artifactとしてアップロード。
 5. `github-pages` 環境へ公開。
@@ -25,10 +25,13 @@ GitHub PagesのソースはGitHub Actionsです。`.github/workflows/deploy.yml`
 
 価格・営業時間・写真パス・お知らせの初期内容は `src/content.json` で管理します。写真は `public/images/` に配置し、内容データでは `/images/ファイル名` を指定してください。表示時にビルド先の基点を付けるため、ローカルとGitHub Pagesで同じデータを使用できます。編集デモからのアップロード画像はdata URLのまま扱います。
 
+更新時は `src/version.ts` と `index.html` の読み込みURLの `v` を同じ新しい番号にします。現在は `20261003-3` です。編集操作・表示10件／保存20件の仕様は [editing-spec.md](editing-spec.md) を参照してください。
+
 ```powershell
 npm.cmd test
 npm.cmd run build:pages
-git add .
+git add src/content.json src/version.ts index.html
+# 写真なども変更した場合は、そのファイルを指定して追加してください。
 git commit -m "Update zeigo site content"
 git push origin main
 ```
@@ -49,6 +52,7 @@ http://127.0.0.1:4173/zeigo-sample/ を開きます。写真、フォント、�
 ```powershell
 $env:CHECK_URL = 'http://127.0.0.1:4173/zeigo-sample/'
 npm.cmd run check:browser
+npm.cmd run check:editing
 ```
 
 実行にはREADMEに記載のPlaywright用Chromiumが必要です。

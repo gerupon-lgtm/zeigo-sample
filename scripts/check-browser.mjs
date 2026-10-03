@@ -116,10 +116,11 @@ try {
   assert.equal(new URL(page.url()).searchParams.get('design'), 'ai');
   await page.goBack();
   assert.equal(await page.locator('.theme-shiro').count(), 1);
-  await page.getByRole('button', { name: '写真・価格の編集デモを開く', exact: true }).click();
+  await page.getByRole('button', { name: '編集デモを開く', exact: true }).click();
   await page.screenshot({ path: 'docs/previews/editor.png' });
   await page.getByRole('spinbutton', { name: 'かけうどんの価格', exact: true }).fill('700');
   await page.getByRole('button', { name: '変更を保存', exact: true }).click();
+  await page.getByRole('button', { name: 'このブラウザに保存', exact: true }).click();
   await page.getByRole('status').filter({ hasText: '保存し' }).waitFor();
   await page.getByRole('button', { name: '閉じる', exact: true }).click();
   assert.ok(await page.locator('.menu-rows').innerText().then(text => text.includes('¥700')));
@@ -127,12 +128,14 @@ try {
   assert.ok(await page.locator('.menu-rows').innerText().then(text => text.includes('¥700')));
   await page.getByRole('button', { name: 'B 藍と余韻', exact: true }).click();
   assert.ok(await page.locator('.menu-rows').innerText().then(text => text.includes('¥700')));
-  await page.getByRole('button', { name: '写真・価格の編集デモを開く', exact: true }).click();
+  await page.getByRole('button', { name: '編集デモを開く', exact: true }).click();
+  await page.getByRole('tab', { name: '写真', exact: true }).click();
   // A tiny valid image verifies actual FileReader upload and persisted photo state.
   const tinyPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a1l8AAAAASUVORK5CYII=', 'base64');
   await page.locator('.photo-edit input[type=file]').first().setInputFiles({ name: 'sample.png', mimeType: 'image/png', buffer: tinyPng });
   await page.getByRole('status').filter({ hasText: '写真を読み込みました' }).waitFor();
   await page.getByRole('button', { name: '変更を保存', exact: true }).click();
+  await page.getByRole('button', { name: 'このブラウザに保存', exact: true }).click();
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('zeigo-proposal-content-v1')));
   assert.ok(saved.photos.hero.startsWith('data:image/png;base64,'));
   const downloadPromise = page.waitForEvent('download');
