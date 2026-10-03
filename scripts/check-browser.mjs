@@ -44,12 +44,25 @@ try {
           assert.ok(target.y >= fixedHeader.y + fixedHeader.height, `${design}: ${id} is not hidden behind the header at ${width}`);
         }
       } else {
-        await page.getByRole('button', { name: 'メニューを開く', exact: true }).click();
-        await page.locator('.mobile-nav').getByRole('link', { name: '田舎家について' }).click();
-        assert.equal(await page.locator('.mobile-nav').count(), 0);
-        const target = await page.locator('#about').boundingBox();
-        const toolbar = await page.locator('.proposal-bar').boundingBox();
-        assert.ok(target.y >= toolbar.y + toolbar.height, `${design}: mobile section jump remains visible at ${width}`);
+        for (const top of [1200, Number.MAX_SAFE_INTEGER]) {
+          await page.evaluate(y => scrollTo({ top: y, behavior: 'instant' }), top);
+          const header = await page.locator('.site-header').boundingBox();
+          const toolbar = await page.locator('.proposal-bar').boundingBox();
+          const menuButton = await page.locator('.mobile-menu-button').boundingBox();
+          assert.ok(Math.abs(header.y - (toolbar.y + toolbar.height)) < 2, `${design}: mobile header remains visible after scrolling at ${width}`);
+          assert.ok(menuButton.y >= 0 && menuButton.y + menuButton.height <= page.viewportSize().height, `${design}: hamburger remains in the viewport at ${width}`);
+          await page.getByRole('button', { name: 'メニューを開く', exact: true }).click();
+          await page.locator('.mobile-nav').waitFor({ state: 'visible' });
+          await page.getByRole('button', { name: 'メニューを閉じる', exact: true }).click();
+        }
+        for (const id of ['about', 'menu', 'news', 'access']) {
+          await page.getByRole('button', { name: 'メニューを開く', exact: true }).click();
+          await page.locator(`.mobile-nav a[href="#${id}"]`).click();
+          assert.equal(await page.locator('.mobile-nav').count(), 0);
+          const target = await page.locator(`#${id}`).boundingBox();
+          const header = await page.locator('.site-header').boundingBox();
+          assert.ok(target.y >= header.y + header.height - 1, `${design}: ${id} is not hidden behind the mobile header at ${width}`);
+        }
       }
       const links = await page.locator('a[href^="tel:"]').count();
       assert.ok(links > 0);
@@ -57,6 +70,8 @@ try {
     }
     await page.setViewportSize({ width: 390, height: 844 });
     await page.screenshot({ path: `docs/previews/${design}-mobile.png`, fullPage: true });
+    await page.evaluate(() => scrollTo({ top: 1200, behavior: 'instant' }));
+    await page.screenshot({ path: `docs/previews/${design}-mobile-scrolled.png` });
     await page.getByRole('button', { name: 'メニューを開く', exact: true }).click();
     await page.locator('.mobile-nav').getByRole('link', { name: 'お品書き' }).click();
     assert.equal(await page.locator('.mobile-nav').count(), 0);
@@ -74,7 +89,23 @@ try {
     await page.keyboard.press('Escape');
     assert.equal(await page.locator('dialog').count(), 0);
     await page.setViewportSize({ width: 1440, height: 1050 });
-    console.log(`PASS ${design}: 5 responsive widths, readable text, fixed desktop header, section jumps, mobile navigation, categories, menu sheets, news.`);
+    for (const viewport of [{ width: 844, height: 390 }, { width: 390, height: 320 }]) {
+      await page.setViewportSize(viewport);
+      await page.evaluate(() => scrollTo({ top: 1200, behavior: 'instant' }));
+      await page.getByRole('button', { name: 'メニューを開く', exact: true }).click();
+      const navigation = page.locator('.mobile-nav');
+      const bounds = await navigation.boundingBox();
+      const bottomBar = page.locator('.mobile-bottom');
+      const bottomBounds = await bottomBar.isVisible() ? await bottomBar.boundingBox() : null;
+      assert.ok(bounds.y + bounds.height <= (bottomBounds?.y ?? viewport.height) + 1, `${design}: open menu fits above the bottom controls at ${viewport.width}x${viewport.height}`);
+      await navigation.evaluate(node => { node.scrollTop = node.scrollHeight; });
+      const phone = navigation.locator('a[href^="tel:"]');
+      const phoneBounds = await phone.boundingBox();
+      assert.ok(phoneBounds.y >= bounds.y && phoneBounds.y + phoneBounds.height <= bounds.y + bounds.height + 1, `${design}: final menu item remains accessible in a short viewport`);
+      await page.getByRole('button', { name: 'メニューを閉じる', exact: true }).click();
+    }
+    await page.setViewportSize({ width: 1440, height: 1050 });
+    console.log(`PASS ${design}: 5 responsive widths, readable text, fixed desktop/mobile headers, section jumps, short-screen menus, categories, menu sheets, news.`);
   }
   await page.goto(`${base}/`);
   await page.getByRole('button', { name: '3案を比較する', exact: true }).click();
