@@ -25,7 +25,7 @@ GitHub PagesのソースはGitHub Actionsです。`.github/workflows/deploy.yml`
 
 価格・営業時間・写真パス・お知らせの初期内容は `src/content.json` で管理します。写真は `public/images/` に配置し、内容データでは `/images/ファイル名` を指定してください。表示時にビルド先の基点を付けるため、ローカルとGitHub Pagesで同じデータを使用できます。編集デモからのアップロード画像はdata URLのまま扱います。
 
-更新時は `src/version.ts` と `index.html` の読み込みURLの `v` を同じ新しい番号にします。現在は `20261003-4` です。編集操作・表示10件／保存20件の仕様は [editing-spec.md](editing-spec.md) を参照してください。
+更新時は `src/version.ts` と `index.html` の読み込みURLの `v` を同じ新しい番号にします。現在は `20261003-5` です。編集操作・表示10件／保存20件の仕様は [editing-spec.md](editing-spec.md) を参照してください。
 
 ```powershell
 npm.cmd test
