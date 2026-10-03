@@ -66,6 +66,7 @@
 .site .access-info dl > div { grid-template-columns: 108px 1fr; }
 .site .access-phone { font-size: 22px; }
 .site .footer-main > p { font-size: 16px; }
+.site .sample-credit { margin-top: 16px; font-size: 14px; line-height: 1.6; color: var(--muted); letter-spacing: .025em; text-align: right; }
 .site .back-top { font-size: 14px; }
 .site .welcome-note { font-size: 16px; }
 .site .dialog .button { font-size: 16px; }
@@ -169,6 +170,7 @@
   .site .footer-main > p { font-size: 16px; }
   .site .back-top { font-size: 14px; }
   .site .footer-bottom { font-size: 14px; line-height: 1.9; }
+  .site .sample-credit { text-align: left; }
   .site .mobile-bottom > a { font-size: 16px; min-height: 60px; gap: 8px; padding-inline: 8px; white-space: nowrap; }
   .site .site-footer { padding-bottom: calc(95px + env(safe-area-inset-bottom)); }
   .site.theme-ai .hero-ai { height: 640px; }
