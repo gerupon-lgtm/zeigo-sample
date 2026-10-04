@@ -5,8 +5,10 @@ import ts from 'typescript';
 
 const dataUrl = source => 'data:text/javascript;base64,' + Buffer.from(ts.transpile(source, { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext })).toString('base64');
 const founding = dataUrl(await readFile(new URL('../src/founding.ts', import.meta.url), 'utf8'));
-const source = (await readFile(new URL('../src/content-model.ts', import.meta.url), 'utf8')).replace("'./founding'", JSON.stringify(founding));
+const features=dataUrl(await readFile(new URL('../src/site-features.ts',import.meta.url),'utf8'));
+const source = (await readFile(new URL('../src/content-model.ts', import.meta.url), 'utf8')).replace("'./founding'", JSON.stringify(founding)).replace("'./site-features'",JSON.stringify(features));
 const { validateContent, displayedNews, contentChanges, MAX_IMPORT_BYTES } = await import(dataUrl(source));
+const {normalizeContent,prepareContent,publicationState,hasNew,badgeLabels,validCustomBadge,publishedContentChanged}=await import(features);
 const original = JSON.parse(await readFile(new URL('../src/content.json', import.meta.url), 'utf8'));
 const article = i => ({ id: `n${i}`, date: `2026-10-${String(i + 1).padStart(2, '0')}`, label: '検証', title: `記事${i}`, body: '検証用の本文', visible: true });
 
@@ -60,4 +62,34 @@ test('review records add, edit, hide, order, pictures and deletion', () => {
   for (const name of ['品名', '価格', '掲載', '表示順', 'お知らせの追加', 'お知らせの削除']) assert.ok(changes.some(change => change.label.includes(name)));
   assert.equal(changes.find(change => change.label === 'お知らせの追加').afterImage, '/images/udon.png');
   assert.deepEqual(contentChanges(original, original), []);
+});
+
+test('SITE BASE migration preserves legacy fields, gives three samples once and respects twenty',()=>{
+ const old=structuredClone(original);old.menu.reverse();old.menu[0].price=777;old.news[0].body='編集した本文';old.photos.hero='/images/udon.png';
+ const next=normalizeContent(old);assert.equal(next.news.length,3);assert.equal(next.menu[0].price,777);assert.equal(next.news[0].body,'編集した本文');assert.equal(next.photos.hero,old.photos.hero);
+ assert.equal(next.menu[0].newEnabled,false);next.news=next.news.filter(n=>n.id!=='demo-news-photo');assert.equal(normalizeContent(next).news.length,2);
+ old.news=Array.from({length:20},(_,i)=>({...article(i),label:i===0?'キャンペーン':'検証'}));const full=normalizeContent(old);assert.equal(full.news.length,20);assert.deepEqual(full.news[0].badges,['campaign']);full.news[0].badges=[];assert.deepEqual(normalizeContent(full).news[0].badges,[]);
+ assert.equal(validateContent(full),true);
+});
+test('badges support multiple choices and a single six-character custom label',()=>{
+ assert.equal(validCustomBadge('キャンペーン'),true);assert.equal(validCustomBadge('数量限定販売中'),false);assert.equal(validCustomBadge('は\u3099っじ'),true);
+ const item={badges:['limited-quantity','ended'],customBadge:'予約限定',customBadgeEnabled:true};assert.deepEqual(badgeLabels(item),['数量限定','終了','予約限定']);
+ for(const patch of [{badges:['unknown']},{badges:['ended','ended']},{customBadge:'数量限定販売中'},{customBadgeEnabled:true,customBadge:''},{newMode:'unknown'},{startAt:100,endAt:100}]){const c=normalizeContent(original);Object.assign(c.menu[0],patch);assert.equal(validateContent(c),false);}
+});
+test('publication boundaries, NEW origin and draft/hidden controls remain separate',()=>{
+ const now=Date.UTC(2026,9,4),day=86400000;
+ const before=normalizeContent(original),draft=structuredClone(before);const item=draft.menu[0];item.startAt=now+day;item.endAt=now+4*day;item.newEnabled=true;
+ const next=prepareContent(before,draft,now),saved=next.menu[0];assert.equal(saved.newStartedAt,now+day);assert.equal(publicationState(saved,now),'公開待ち');assert.equal(hasNew(saved,now,14),false);assert.equal(hasNew(saved,now+day,14),true);assert.equal(publicationState(saved,now+4*day),'終了');
+ const change=structuredClone(next);change.menu[0].price=999;assert.equal(prepareContent(next,change,now+2*day).menu[0].newStartedAt,saved.newStartedAt);
+ change.menu[0].reapplyNew=true;assert.equal(prepareContent(next,change,now+2*day).menu[0].newStartedAt,now+2*day);
+ assert.equal(hasNew({...saved,visible:false},now+day,14),false);assert.equal(hasNew({...saved,published:false},now+day,14),false);
+ assert.equal(hasNew({...saved,newMode:'manual',endAt:null},now+100*day,14),true);
+ const invalid=structuredClone(before);invalid.menu[0].endAt=now-1;assert.throws(()=>prepareContent(before,invalid,now),/終了日時/);
+});
+test('internal inquiry edits and unpublished drafts do not update the public timestamp',()=>{
+ const c=normalizeContent(original);c.inquiries=[{id:'q1',name:'デモ',email:'sample@example.com',kind:'その他',body:'架空の相談',receivedAt:Date.now(),status:'未対応',memo:'',notification:'未送信（サンプル）'}];
+ const next=structuredClone(c);next.inquiries[0].status='対応済み';next.inquiries[0].memo='確認済み';const prepared=prepareContent(c,next);
+ assert.equal(publishedContentChanged(c,prepared),false);assert.equal(prepared.lastUpdated,c.lastUpdated);assert.equal(validateContent(prepared),true);
+ next.menu.push({...next.menu[0],id:'draft',published:false,name:'下書き'});assert.equal(publishedContentChanged(c,prepareContent(c,next)),false);
+ assert.ok(contentChanges(c,prepared).some(change=>change.label.includes('対応状況')));
 });

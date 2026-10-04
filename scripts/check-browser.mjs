@@ -10,7 +10,8 @@ const page = await context.newPage();
 const errors = [];
 page.on('pageerror', error => errors.push(error.message));
 page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
-await mkdir('docs/previews', { recursive: true });
+const previewDir=process.env.CHECK_ARTIFACT_DIR??'.cache/browser-previews';
+await mkdir(previewDir, { recursive: true });
 const base = (process.env.CHECK_URL ?? 'http://127.0.0.1:5173').replace(/\/+$/, '');
 try {
   for (const design of ['shiro', 'ai', 'komorebi']) {
@@ -24,7 +25,7 @@ try {
     assert.equal(await page.locator(`.theme-${design}`).count(), 1);
     assert.equal(await page.locator('.menu-row').count(), 6);
     await page.screenshot({ path: `public/images/preview-${design}.jpg`, type: 'jpeg', quality: 85 });
-    await page.screenshot({ path: `docs/previews/${design}-desktop.png`, fullPage: true });
+    await page.screenshot({ path: `${previewDir}/${design}-desktop.png`, fullPage: true });
     for (const width of [320, 390, 768, 1024, 1440]) {
       await page.setViewportSize({ width, height: width < 680 ? 844 : 1050 });
       const metrics = await page.evaluate(() => ({ view: innerWidth, body: document.documentElement.scrollWidth }));
@@ -69,9 +70,9 @@ try {
       await page.evaluate(() => scrollTo(0, 0));
     }
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.screenshot({ path: `docs/previews/${design}-mobile.png`, fullPage: true });
+    await page.screenshot({ path: `${previewDir}/${design}-mobile.png`, fullPage: true });
     await page.evaluate(() => scrollTo({ top: 1200, behavior: 'instant' }));
-    await page.screenshot({ path: `docs/previews/${design}-mobile-scrolled.png` });
+    await page.screenshot({ path: `${previewDir}/${design}-mobile-scrolled.png` });
     await page.getByRole('button', { name: 'メニューを開く', exact: true }).click();
     await page.locator('.mobile-nav').getByRole('link', { name: 'お品書き' }).click();
     assert.equal(await page.locator('.mobile-nav').count(), 0);
@@ -111,7 +112,7 @@ try {
   await page.getByRole('button', { name: '3案を比較する', exact: true }).click();
   assert.equal(await page.locator('.compare-card').count(), 3);
   await page.evaluate(() => Promise.all(Array.from(document.querySelectorAll('dialog img')).map(img => img.decode().catch(() => {}))));
-  await page.screenshot({ path: 'docs/previews/comparison.png' });
+  await page.screenshot({ path: `${previewDir}/comparison.png` });
   await page.getByRole('button', { name: 'B案を開く' }).click();
   assert.equal(new URL(page.url()).searchParams.get('design'), 'ai');
   await page.goBack();
@@ -130,14 +131,14 @@ try {
   assert.ok(await page.locator('.menu-rows').innerText().then(text => text.includes('¥700')));
   await page.getByRole('button', { name: '編集デモを開く', exact: true }).click();
   await page.getByRole('tab', { name: '写真', exact: true }).click();
-  // A tiny valid image verifies actual FileReader upload and persisted photo state.
-  const tinyPng = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a1l8AAAAASUVORK5CYII=', 'base64');
+  // A browser-generated PNG verifies image optimization and persisted photo state.
+  const tinyPng = Buffer.from(await page.evaluate(()=>{const c=document.createElement('canvas');c.width=120;c.height=80;c.getContext('2d').fillRect(0,0,120,80);return c.toDataURL('image/png').split(',')[1];}), 'base64');
   await page.locator('.photo-edit input[type=file]').first().setInputFiles({ name: 'sample.png', mimeType: 'image/png', buffer: tinyPng });
   await page.getByRole('status').filter({ hasText: '写真を読み込みました' }).waitFor();
   await page.getByRole('button', { name: '変更を保存', exact: true }).click();
   await page.getByRole('button', { name: 'このブラウザに保存', exact: true }).click();
   const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('zeigo-proposal-content-v1')));
-  assert.ok(saved.photos.hero.startsWith('data:image/png;base64,'));
+  assert.match(saved.photos.hero,/^data:image\/(webp|png);base64,/);
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: 'JSONを書き出す' }).click();
   const download = await downloadPromise;

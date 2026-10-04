@@ -1,5 +1,7 @@
+// © 2026 SIKUMI LAB
 import type { Content, NewsItem } from './types';
 import { getJapanDate, isFoundingDate } from './founding';
+import { validPublication, publicationState, badgeLabels, showDate } from './site-features';
 
 export const STORAGE_KEY = 'zeigo-proposal-content-v1';
 export const MENU_CATEGORIES = ['うどん', 'そば', '丼・定食', '寿司・御膳', '会席'];
@@ -27,21 +29,28 @@ export function validateContent(value: unknown): value is Content {
   if (!shopKeys.every(key => text(shop[key], 299)) || !/^https:\/\/www\.instagram\.com\//.test(String(shop.instagram)) || !/^[0-9-]{8,20}$/.test(String(shop.phone))) return false;
   if (shop.foundedYear !== undefined && !(Number.isInteger(shop.foundedYear) && Number(shop.foundedYear) >= 1800 && Number(shop.foundedYear) <= getJapanDate().year)) return false;
   if (shop.foundedDate != null && !isFoundingDate(shop.foundedDate, Number(shop.foundedYear ?? 1979))) return false;
+  if(value.inquiries!==undefined){
+    if(!Array.isArray(value.inquiries)||!value.inquiries.every(i=>record(i)&&text(i.id,100,true)&&text(i.name,80,true)&&text(i.email,150,true)&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(i.email)&&['各種お問合せ','その他'].includes(String(i.kind))&&text(i.body,2000,true)&&typeof i.receivedAt==='number'&&Number.isSafeInteger(i.receivedAt)&&i.receivedAt>0&&i.receivedAt<8640000000000000&&['未対応','対応中','対応済み'].includes(String(i.status))&&text(i.memo,2000)&&i.notification==='未送信（サンプル）'))return false;
+    if(new Set(value.inquiries.map(i=>i.id)).size!==value.inquiries.length)return false;
+  }
   const photos = value.photos;
-  if (!['hero', 'udon', 'exterior', 'interior'].every(key => safePhoto(photos[key]))) return false;
+  if (!['hero', 'udon', 'exterior', 'interior'].every(key => safePhoto(photos[key])) || photos.gozen !== undefined && !safePhoto(photos.gozen)) return false;
+  if(value.newDays !== undefined && (!Number.isInteger(value.newDays) || Number(value.newDays)<1 || Number(value.newDays)>365)) return false;
+  if(value.lastUpdated !== undefined && (typeof value.lastUpdated !== 'number' || !Number.isSafeInteger(value.lastUpdated) || value.lastUpdated<=0 || value.lastUpdated>=8640000000000000)) return false;
+  if(value.demoNewsRevision !== undefined && value.demoNewsRevision !== 1) return false;
   if (!Array.isArray(value.menu) || !value.menu.length || value.menu.length > MAX_MENU_ITEMS) return false;
-  if (!value.menu.every(item => record(item) && text(item.id, 100, true) && text(item.name, 100, true) && MENU_CATEGORIES.includes(String(item.category)) && Number.isSafeInteger(item.price) && Number(item.price) >= 0 && Number(item.price) <= 1000000 && (item.note === undefined || text(item.note, 100)) && optionalFlag(item.visible))) return false;
+  if (!value.menu.every(item => record(item) && validPublication(item) && text(item.id, 100, true) && text(item.name, 100, true) && MENU_CATEGORIES.includes(String(item.category)) && Number.isSafeInteger(item.price) && Number(item.price) >= 0 && Number(item.price) <= 1000000 && (item.note === undefined || text(item.note, 100)) && optionalFlag(item.visible))) return false;
   if (new Set(value.menu.map(item => item.id)).size !== value.menu.length) return false;
   const max = value.newsMaxItems ?? DEFAULT_NEWS_MAX;
   const display = value.newsDisplayLimit ?? Math.min(DEFAULT_NEWS_DISPLAY, Number(max));
   if (max !== DEFAULT_NEWS_MAX || display !== DEFAULT_NEWS_DISPLAY) return false;
   if (!Array.isArray(value.news) || value.news.length > Number(max)) return false;
-  if (!value.news.every(item => record(item) && text(item.id, 100, true) && validNewsDate(item.date) && text(item.label, 40, true) && text(item.title, 140, true) && text(item.body, 5000, true) && optionalFlag(item.visible) && optionalFlag(item.featured) && (item.image === undefined || item.image === '' || safePhoto(item.image)))) return false;
+  if (!value.news.every(item => record(item) && validPublication(item) && text(item.id, 100, true) && validNewsDate(item.date) && text(item.label, 40, true) && text(item.title, 140, true) && text(item.body, 5000, true) && optionalFlag(item.visible) && optionalFlag(item.featured) && (item.image === undefined || item.image === '' || safePhoto(item.image)))) return false;
   return new Set(value.news.map(item => item.id)).size === value.news.length;
 }
 
-export function displayedNews(content: Content): NewsItem[] {
-  return content.news.filter(item => item.visible !== false)
+export function displayedNews(content: Content, time = Date.now()): NewsItem[] {
+  return content.news.filter(item => publicationState(item,time) === '公開中')
     .sort((a, b) => Number(!!b.featured) - Number(!!a.featured) || b.date.replaceAll('.', '-').localeCompare(a.date.replaceAll('.', '-')))
     .slice(0, content.newsDisplayLimit ?? DEFAULT_NEWS_DISPLAY);
 }
@@ -56,11 +65,22 @@ export function contentChanges(before: Content, after: Content): ContentChange[]
   for (const [key, label] of [['name', '店名'], ['reading', '店名の読み'], ['founded', '創業の表記'], ['address', '住所'], ['phone', '電話番号'], ['parking', '駐車場'], ['instagram', 'Instagram']] as const) add(label, before.shop[key], after.shop[key]);
   add('創業年', String(before.shop.foundedYear ?? ''), String(after.shop.foundedYear ?? ''));
   add('創業日', before.shop.foundedDate ?? '', after.shop.foundedDate ?? '');
-  for (const [key, label] of [['hero', 'メイン写真'], ['udon', 'うどん写真'], ['exterior', '外観写真'], ['interior', '店内写真']] as const) {
+  for (const [key, label] of [['hero', 'メイン写真'], ['udon', 'うどん写真'], ['exterior', '外観写真'], ['interior', '店内写真'], ['gozen', '御膳の紹介画像']] as const) {
     if (before.photos[key] !== after.photos[key]) changes.push({ label, before: '変更前の写真', after: '変更後の写真', beforeImage: before.photos[key], afterImage: after.photos[key] });
   }
+  add('NEWの共通日数', String(before.newDays ?? 14), String(after.newDays ?? 14));
+  const publicationChanges = (label: string, old: Content['menu'][number] | Content['news'][number] | undefined, item: Content['menu'][number] | Content['news'][number]) => {
+    add(`${label}：バッジ`, badgeLabels(old ?? {}).join('・'), badgeLabels(item).join('・'));
+    add(`${label}：NEW`, old?.newEnabled ? old.newMode === 'manual' ? '手動' : '自動' : 'なし', item.newEnabled ? item.newMode === 'manual' ? '手動' : '自動' : 'なし');
+    add(`${label}：自由入力の文字`,old?.customBadge ?? '',item.customBadge ?? '');
+    if(old?.newStartedAt!==item.newStartedAt)add(`${label}：NEWの開始日時`,old?.newStartedAt?showDate(old.newStartedAt,true):'未設定',item.newStartedAt?showDate(item.newStartedAt,true):'未設定');
+    if(item.reapplyNew && item.newEnabled)add(`${label}：NEWの付け直し`, '前回の開始日を維持', '今回の公開から再開');
+    add(`${label}：公開・下書き`, old?.published === false ? '下書き' : '公開', item.published === false ? '下書き' : '公開');
+    for(const [key,name] of [['startAt','公開日時'],['endAt','終了日時']] as const)add(`${label}：${name}`, old?.[key] ? showDate(old[key]!,true) : key==='startAt'?'今すぐ':'終了なし',item[key] ? showDate(item[key]!,true) : key==='startAt'?'今すぐ':'終了なし');
+  };
   for (const item of after.menu) {
     const old = before.menu.find(entry => entry.id === item.id);
+    publicationChanges(item.name || '新しい品', old, item);
     if (!old) { add('お品書きの追加', '', `${item.name} / ${item.category} / ${item.price}円 / ${item.visible === false ? '非表示' : '表示'}`); continue; }
     add(`${old.name}：品名`, old.name, item.name);
     add(`${old.name}：価格`, `${old.price}円`, `${item.price}円`);
@@ -81,6 +101,7 @@ export function contentChanges(before: Content, after: Content): ContentChange[]
   add('お知らせの表示上限', String(before.newsDisplayLimit ?? DEFAULT_NEWS_DISPLAY), String(after.newsDisplayLimit ?? DEFAULT_NEWS_DISPLAY));
   for (const item of after.news) {
     const old = before.news.find(entry => entry.id === item.id);
+    publicationChanges(item.title || '新しいお知らせ', old, item);
     if (!old) { changes.push({ label: 'お知らせの追加', before: 'なし', after: `${item.title}\n${item.date} / ${item.label} / ${item.visible === false ? '非表示' : '表示対象'}${item.featured ? ' / ピックアップ' : ''}\n${item.body}`, afterImage: item.image }); continue; }
     for (const [key, label] of [['title', 'タイトル'], ['date', '日付'], ['label', '種類'], ['body', '本文']] as const) add(`${old.title}：${label}`, old[key], item[key]);
     add(`${old.title}：掲載`, old.visible === false ? '非表示' : '表示対象', item.visible === false ? '非表示' : '表示対象');
@@ -88,5 +109,9 @@ export function contentChanges(before: Content, after: Content): ContentChange[]
     if (old.image !== item.image && (old.image || item.image)) changes.push({ label: `${old.title}：写真`, before: old.image ? '変更前の写真' : 'なし', after: item.image ? '変更後の写真' : 'なし', beforeImage: old.image, afterImage: item.image });
   }
   for (const item of before.news.filter(item => !after.news.some(entry => entry.id === item.id))) add('お知らせの削除', item.title, '削除');
+  for(const item of after.inquiries??[]){
+    const old=before.inquiries?.find(entry=>entry.id===item.id);
+    if(old){add(`${old.name}：対応状況`,old.status,item.status);add(`${old.name}：内部メモ`,old.memo,item.memo);}
+  }
   return changes;
 }

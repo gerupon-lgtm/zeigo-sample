@@ -10,8 +10,21 @@
     "preview": "vite preview --configLoader native --host 127.0.0.1",
     "check:browser": "node scripts/check-browser.mjs",
     "check:editing": "node scripts/check-editing.mjs",
-    "test": "node --test scripts/founding.test.mjs scripts/content-model.test.mjs"
+    "test": "node --test scripts/founding.test.mjs scripts/content-model.test.mjs",
+    "check:site-base": "node scripts/check-site-base-integration.mjs",
+    "check:photos-touch": "node scripts/check-zeigo-photos-touch.mjs"
   },
-  "dependencies": { "react": "^19.2.0", "react-dom": "^19.2.0", "lucide-react": "^0.468.0" },
-  "devDependencies": { "@types/react": "^19.2.0", "@types/react-dom": "^19.2.0", "@vitejs/plugin-react": "^5.0.0", "typescript": "^5.9.0", "vite": "^7.1.0", "@playwright/test": "^1.56.0" }
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "lucide-react": "^0.468.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "typescript": "^5.9.0",
+    "vite": "^7.1.0",
+    "@playwright/test": "^1.56.0"
+  }
 }
