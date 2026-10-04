@@ -16,7 +16,9 @@
     "parking": "28台",
     "instagram": "https://www.instagram.com/zeigo.suzuka/"
   },
-  "photos": { "hero": "/images/soba-hero.png", "udon": "/images/udon.png", "exterior": "/images/1.jpg", "interior": "/images/img4.jpg" },
+  "photos": { "hero": "/images/udon.png",
+    "soba": "/images/soba-hero.png",
+    "udon": "/images/udon.png", "exterior": "/images/1.jpg", "interior": "/images/img4.jpg" },
   "menu": [
     { "id": "u1", "category": "うどん", "name": "かけうどん", "price": 640 },
     { "id": "u2", "category": "うどん", "name": "きつねうどん", "price": 750 },

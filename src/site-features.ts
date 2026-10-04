@@ -6,7 +6,7 @@ export const BADGE_OPTIONS = [
   { id: 'sold-out', label: '売り切れ' }, { id: 'closed', label: '受付停止' }, { id: 'ended', label: '終了' },
 ];
 export const PHOTO_SLOTS = [
-  { id: 'hero', label: 'そば・メイン写真' }, { id: 'udon', label: 'うどん写真' },
+  { id: 'hero', label: 'メイン写真' }, { id: 'soba', label: 'そば写真' }, { id: 'udon', label: 'うどん写真' },
   { id: 'exterior', label: 'お店の外観' }, { id: 'gozen', label: '御膳の紹介画像' },
   { id: 'interior', label: '店内写真（掲載時に使用）' },
 ] as const;
@@ -54,6 +54,12 @@ export function normalizeContent(content: Content): Content {
   next.news = next.news.map(item => normalize(item, item.label));
   next.newDays ??= 14;
   next.lastUpdated ??= Date.UTC(2026, 9, 1);
+  // Split the previously shared hero/soba setting without losing saved photos.
+  if (next.photos.soba === undefined) {
+    next.photos.soba = next.photos.hero;
+    // Replace only the former sample default; retain custom main photos.
+    if (next.photos.hero === '/images/soba-hero.png') next.photos.hero = '/images/udon.png';
+  }
   next.photos.gozen ??= '/images/m4.jpg';
   next.inquiries ??= [];
   // Supplement sample articles only once; never replace edits or exceed 20.

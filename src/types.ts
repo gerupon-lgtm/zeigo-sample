@@ -13,7 +13,7 @@ export type Inquiry = { id: string; name: string; email: string; kind: '各種�
 export type Content = {
   schemaVersion: number;
   shop: { name: string; reading: string; founded: string; foundedYear?: number; foundedDate?: string | null; address: string; phone: string; hours: string; lateHours: string; closed: string; parking: string; instagram: string };
-  photos: { hero: string; udon: string; exterior: string; interior: string; gozen?: string };
+  photos: { hero: string; soba?: string; udon: string; exterior: string; interior: string; gozen?: string };
   menu: MenuItem[];
   news: NewsItem[];
   newsMaxItems?: number;

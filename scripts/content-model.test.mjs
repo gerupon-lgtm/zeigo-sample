@@ -13,7 +13,7 @@ const original = JSON.parse(await readFile(new URL('../src/content.json', import
 const article = i => ({ id: `n${i}`, date: `2026-10-${String(i + 1).padStart(2, '0')}`, label: '検証', title: `記事${i}`, body: '検証用の本文', visible: true });
 
 test('a full photo backup fits the JSON import size limit', () => {
-  const c = structuredClone(original);
+  const c = normalizeContent(original);
   const photo = 'data:image/jpeg;base64,' + 'A'.repeat(1398104);
   for (const key of Object.keys(c.photos)) c.photos[key] = photo;
   c.news = Array.from({ length: 20 }, (_, i) => ({ ...article(i), image: photo, body: '文'.repeat(5000) }));
@@ -92,4 +92,25 @@ test('internal inquiry edits and unpublished drafts do not update the public tim
  assert.equal(publishedContentChanged(c,prepared),false);assert.equal(prepared.lastUpdated,c.lastUpdated);assert.equal(validateContent(prepared),true);
  next.menu.push({...next.menu[0],id:'draft',published:false,name:'下書き'});assert.equal(publishedContentChanged(c,prepareContent(c,next)),false);
  assert.ok(contentChanges(c,prepared).some(change=>change.label.includes('対応状況')));
+});
+
+// A new photo slot must inherit the user's legacy photo only once.
+test('main and soba photos migrate once, validate independently and review separately',()=>{
+ const legacy=structuredClone(original);delete legacy.photos.soba;legacy.photos.hero='/images/1.jpg';
+ assert.equal(validateContent(legacy),true);const before=normalizeContent(legacy);
+ assert.equal(before.photos.hero,legacy.photos.hero);assert.equal(before.photos.soba,legacy.photos.hero);assert.equal(legacy.photos.soba,undefined);
+ const next=structuredClone(before);next.photos.hero=original.photos.hero;
+ assert.equal(normalizeContent(next).photos.soba,legacy.photos.hero);
+ assert.deepEqual(contentChanges(before,next).map(c=>c.label),['メイン写真']);
+ next.photos.soba='/images/m4.jpg';assert.equal(validateContent(next),true);assert.equal(normalizeContent(next).photos.soba,'/images/m4.jpg');
+ assert.deepEqual(contentChanges(before,next).map(c=>c.label),['メイン写真','そば写真']);
+ assert.equal(publishedContentChanged(before,next),true);next.photos.soba='javascript:alert(1)';assert.equal(validateContent(next),false);
+});
+
+test('legacy default main becomes udon while soba, custom photos and independent imports remain intact',()=>{
+ const legacy=structuredClone(original);delete legacy.photos.soba;legacy.photos.hero='/images/soba-hero.png';
+ const next=normalizeContent(legacy);assert.equal(next.photos.hero,'/images/udon.png');assert.equal(next.photos.soba,'/images/soba-hero.png');assert.equal(legacy.photos.hero,'/images/soba-hero.png');
+ const customized=structuredClone(legacy);customized.photos.hero='data:image/png;base64,AAAA';assert.equal(normalizeContent(customized).photos.hero,customized.photos.hero);assert.equal(normalizeContent(customized).photos.soba,customized.photos.hero);
+ const imported=structuredClone(original);imported.photos.hero='/images/soba-hero.png';assert.equal(normalizeContent(imported).photos.hero,imported.photos.hero);
+ const changed=structuredClone(next);changed.photos.udon='/images/m4.jpg';assert.equal(normalizeContent(changed).photos.hero,next.photos.hero);assert.deepEqual(contentChanges(next,changed).map(c=>c.label),['うどん写真']);
 });

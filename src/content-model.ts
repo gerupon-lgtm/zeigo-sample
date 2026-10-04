@@ -9,7 +9,7 @@ export const MAX_MENU_ITEMS = 199;
 export const DEFAULT_NEWS_MAX = 20;
 export const DEFAULT_NEWS_DISPLAY = 10;
 export const MAX_NEWS_ITEMS = 20;
-// Covers all 24 allowed images after base64 encoding, plus text and metadata.
+// Covers all 26 allowed images after base64 encoding, plus text and metadata.
 export const MAX_IMPORT_BYTES = 40 * 1024 * 1024;
 const record = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
 const text = (value: unknown, max: number, required = false): value is string => typeof value === 'string' && value.length <= max && (!required || value.trim().length > 0);
@@ -34,7 +34,7 @@ export function validateContent(value: unknown): value is Content {
     if(new Set(value.inquiries.map(i=>i.id)).size!==value.inquiries.length)return false;
   }
   const photos = value.photos;
-  if (!['hero', 'udon', 'exterior', 'interior'].every(key => safePhoto(photos[key])) || photos.gozen !== undefined && !safePhoto(photos.gozen)) return false;
+  if (!['hero', 'udon', 'exterior', 'interior'].every(key => safePhoto(photos[key])) || !['gozen', 'soba'].every(key => photos[key] === undefined || safePhoto(photos[key]))) return false;
   if(value.newDays !== undefined && (!Number.isInteger(value.newDays) || Number(value.newDays)<1 || Number(value.newDays)>365)) return false;
   if(value.lastUpdated !== undefined && (typeof value.lastUpdated !== 'number' || !Number.isSafeInteger(value.lastUpdated) || value.lastUpdated<=0 || value.lastUpdated>=8640000000000000)) return false;
   if(value.demoNewsRevision !== undefined && value.demoNewsRevision !== 1) return false;
@@ -65,7 +65,7 @@ export function contentChanges(before: Content, after: Content): ContentChange[]
   for (const [key, label] of [['name', '店名'], ['reading', '店名の読み'], ['founded', '創業の表記'], ['address', '住所'], ['phone', '電話番号'], ['parking', '駐車場'], ['instagram', 'Instagram']] as const) add(label, before.shop[key], after.shop[key]);
   add('創業年', String(before.shop.foundedYear ?? ''), String(after.shop.foundedYear ?? ''));
   add('創業日', before.shop.foundedDate ?? '', after.shop.foundedDate ?? '');
-  for (const [key, label] of [['hero', 'メイン写真'], ['udon', 'うどん写真'], ['exterior', '外観写真'], ['interior', '店内写真'], ['gozen', '御膳の紹介画像']] as const) {
+  for (const [key, label] of [['hero', 'メイン写真'], ['soba', 'そば写真'], ['udon', 'うどん写真'], ['exterior', '外観写真'], ['interior', '店内写真'], ['gozen', '御膳の紹介画像']] as const) {
     if (before.photos[key] !== after.photos[key]) changes.push({ label, before: '変更前の写真', after: '変更後の写真', beforeImage: before.photos[key], afterImage: after.photos[key] });
   }
   add('NEWの共通日数', String(before.newDays ?? 14), String(after.newDays ?? 14));
