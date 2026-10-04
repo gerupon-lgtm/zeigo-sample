@@ -51,8 +51,7 @@ export default function Editor({ content, original, onSave, onClose, time, onClo
       const reordered=[...current];reordered.splice(to,0,reordered.splice(from,1)[0]);
       let index=0;const next={...draft,menu:draft.menu.map(i=>i.category===category?reordered[index++]:i)};
       setDraft(next);setPrepared(null);
-      if(validateContent(next)){setReview(true);setStatus('順番と編集中の変更内容を確認して保存してください。');}
-      else{setStatus('順番を変更しました。入力中の内容を整えてから「変更を保存」で確認してください。');}
+      setStatus('順番を変更しました。続けて編集し、最後に「変更を保存」でまとめて確認してください。');
     },scroller);
   },[draft,category,tab,review]);
   async function upload(e: ChangeEvent<HTMLInputElement>, apply: (data: string) => void) {
