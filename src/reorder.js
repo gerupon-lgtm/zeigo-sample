@@ -17,9 +17,17 @@ export function attachReorder(container, move, scroller=window) {
   }
   function target() {
     const rows=[...container.querySelectorAll('[data-index]')];
-    const others=rows.filter(row=>row!==active.row);
-    let index=others.findIndex(row=>active.y < row.getBoundingClientRect().top+row.getBoundingClientRect().height/2);
-    if(index<0)index=others.length;
+    // Tall editor cards must accept a drop near their heading, even when their
+    // centre is off screen. Keep a small edge zone to avoid accidental moves.
+    let index=active.from;
+    for(let i=0;i<active.from;i++){
+      const rect=rows[i].getBoundingClientRect();
+      if(active.y<rect.bottom-Math.min(24,rect.height/2)){index=i;break;}
+    }
+    for(let i=active.from+1;i<rows.length;i++){
+      const rect=rows[i].getBoundingClientRect();
+      if(active.y>=rect.top+Math.min(24,rect.height/2))index=i;
+    }
     active.to=index;
     rows.forEach(row=>delete row.dataset.drop);
     if(index!==active.from)rows[index].dataset.drop=index>active.from?'below':'above';
@@ -70,7 +78,7 @@ export function attachReorder(container, move, scroller=window) {
     if(active?.input!=='pointer'||event.pointerId!==active.id)return;
     moving(event.clientX,event.clientY);event.preventDefault();
   }
-  function up(event){if(active?.input==='pointer'&&event.pointerId===active.id)finish();}
+  function up(event){if(active?.input==='pointer'&&event.pointerId===active.id){moving(event.clientX,event.clientY);if(active)finish();}}
   function cancel(event){if(active?.input==='pointer'&&event.pointerId===active.id)stop();}
   function touchStart(event) {
     if(event.touches.length!==1){stop();return;}
@@ -88,7 +96,7 @@ export function attachReorder(container, move, scroller=window) {
     }
     moving(touch.clientX,touch.clientY);
   }
-  function touchEnd(event){if(active?.input==='touch'&&[...event.changedTouches].some(t=>t.identifier===active.id))finish();}
+  function touchEnd(event){if(active?.input!=='touch')return;const touch=[...event.changedTouches].find(t=>t.identifier===active.id);if(touch){moving(touch.clientX,touch.clientY);if(active)finish();}}
   function touchCancel(){if(active?.input==='touch')stop();}
   function escape(event){if(event.key==='Escape'&&active){event.preventDefault();event.stopPropagation();stop();}}
   function contextMenu(event){if(rowAt(event.target))event.preventDefault();}
