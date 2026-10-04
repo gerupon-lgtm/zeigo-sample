@@ -9,6 +9,7 @@
     "build:pages": "tsc -b && vite build --configLoader native --base=/zeigo-sample/",
     "preview": "vite preview --configLoader native --host 127.0.0.1",
     "check:browser": "node scripts/check-browser.mjs",
+    "refresh:previews": "node scripts/refresh-design-previews.mjs",
     "check:editing": "node scripts/check-editing.mjs",
     "test": "node --test scripts/founding.test.mjs scripts/content-model.test.mjs",
     "check:site-base": "node scripts/check-site-base-integration.mjs",
