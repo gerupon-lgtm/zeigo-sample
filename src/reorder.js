@@ -34,7 +34,8 @@ export function attachReorder(container, move, scroller=window) {
   }
   function scroll() {
     if(!active?.ghost)return;
-    const edge=85,y=active.y,viewport=scroller===window?{top:0,bottom:innerHeight}:scroller.getBoundingClientRect();
+    const y=active.y,viewport=scroller===window?{top:0,bottom:innerHeight}:scroller.getBoundingClientRect();
+    const edge=Math.min(85,(viewport.bottom-viewport.top)/4);
     const speed=y<viewport.top+edge ? -Math.min(18,Math.ceil((viewport.top+edge-y)/5)) : y>viewport.bottom-edge ? Math.min(18,Math.ceil((y-viewport.bottom+edge)/5)) : 0;
     if(speed){scroller.scrollBy(0,speed);target();}
     frame=requestAnimationFrame(scroll);
@@ -51,7 +52,8 @@ export function attachReorder(container, move, scroller=window) {
     ghost.querySelectorAll('details').forEach(node=>node.removeAttribute('open'));
     ghost.style.left=`${rect.left}px`;ghost.style.top=`${rect.top}px`;
     ghost.style.width=`${rect.width}px`;ghost.style.height=`${rect.height}px`;
-    (scroller instanceof HTMLDialogElement ? scroller : document.body).append(ghost);active.ghost=ghost;
+    const layer=scroller instanceof Element ? scroller.closest('dialog') : null;
+    (layer||document.body).append(ghost);active.ghost=ghost;
     row.classList.remove('drag-pending');row.classList.add('dragging');
     frame=requestAnimationFrame(scroll);
   }
