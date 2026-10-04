@@ -11,7 +11,7 @@ page.on('pageerror', error => errors.push(error.message));
 page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
 const base = (process.env.CHECK_URL ?? 'http://127.0.0.1:5173').replace(/\/+$/, '');
 const open = () => page.getByRole('button', { name: '編集デモを開く', exact: true }).click();
-const close = async () => { await page.getByRole('button', { name: '閉じる', exact: true }).click();if(await page.getByRole('button',{name:'反映せずに終了',exact:true}).count())await page.getByRole('button',{name:'反映せずに終了',exact:true}).click(); };
+const close = async () => { await page.getByRole('button', { name: '閉じる', exact: true }).click();if(await page.getByRole('button',{name:'変更を破棄して終了',exact:true}).count())await page.getByRole('button',{name:'変更を破棄して終了',exact:true}).click(); };
 const save = async () => { await page.getByRole('button', { name: '変更を保存', exact: true }).click(); await page.getByRole('button', { name: 'このブラウザに保存', exact: true }).click(); await page.getByRole('status').filter({ hasText: '保存し' }).waitFor(); };
 const tab = name => page.getByRole('tab', { name, exact: true }).click();
 const stored = () => page.evaluate(() => JSON.parse(localStorage.getItem('zeigo-proposal-content-v1')));

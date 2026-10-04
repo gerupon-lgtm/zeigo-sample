@@ -12,7 +12,7 @@ const errors=[],posts=[];
 const context=await browser.newContext({viewport:{width:1440,height:1050},timezoneId:'Asia/Tokyo',reducedMotion:'reduce'});
 const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>{if(r.method()==='POST')posts.push(r.url());});
 const open=()=>page.getByRole('button',{name:'編集デモを開く',exact:true}).click();
-const close=async()=>{await page.getByRole('button',{name:'閉じる',exact:true}).click();if(await page.getByRole('button',{name:'反映せずに終了',exact:true}).count())await page.getByRole('button',{name:'反映せずに終了',exact:true}).click();};
+const close=async()=>{await page.getByRole('button',{name:'閉じる',exact:true}).click();if(await page.getByRole('button',{name:'変更を破棄して終了',exact:true}).count())await page.getByRole('button',{name:'変更を破棄して終了',exact:true}).click();};
 const tab=name=>page.getByRole('tab',{name,exact:true}).click();
 const save=async()=>{await page.getByRole('button',{name:'変更を保存',exact:true}).click();await page.getByRole('button',{name:'このブラウザに保存',exact:true}).click();};
 const stored=()=>page.evaluate(key=>JSON.parse(localStorage.getItem(key)),key);

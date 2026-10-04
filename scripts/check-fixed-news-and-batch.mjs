@@ -33,7 +33,7 @@ try {
     await page.evaluate(()=>scrollTo(0,document.body.scrollHeight));
     assert.ok(await panel.isVisible(),'scrolling away from title keeps panel open');
     assert.ok(Math.abs((await panel.boundingBox()).y-box.y)<=1,'page scrolling preserves position');
-    await panel.getByRole('button',{name:'閉じる',exact:true}).click();if(await panel.getByRole('button',{name:'反映せずに終了',exact:true}).count())await panel.getByRole('button',{name:'反映せずに終了',exact:true}).click();
+    await panel.getByRole('button',{name:'閉じる',exact:true}).click();if(await panel.getByRole('button',{name:'変更を破棄して終了',exact:true}).count())await panel.getByRole('button',{name:'変更を破棄して終了',exact:true}).click();
    }
   }
   for(const width of [320,390,700]) {
@@ -63,6 +63,6 @@ try {
  await page.getByRole('button',{name:'編集へ戻る',exact:true}).click();assert.deepEqual(await ids(),expected);assert.deepEqual(await stored(),before);
  await page.getByRole('button',{name:'変更を保存',exact:true}).click();await page.getByRole('button',{name:'このブラウザに保存',exact:true}).click();
  const saved=await stored();assert.deepEqual(saved.menu.filter(i=>i.category==='うどん').map(i=>i.id),expected);assert.equal(saved.menu.find(i=>i.id==='u1').price,999);assert.equal(saved.menu.find(i=>i.id==='u2').visible,false);
- await page.getByRole('button',{name:'閉じる',exact:true}).click();if(await page.getByRole('button',{name:'反映せずに終了',exact:true}).count())await page.getByRole('button',{name:'反映せずに終了',exact:true}).click();await page.reload();await page.locator('.menu-list').waitFor();assert.equal(await page.locator('.menu-row').filter({hasText:'きつねうどん'}).count(),0);
+ await page.getByRole('button',{name:'閉じる',exact:true}).click();if(await page.getByRole('button',{name:'変更を破棄して終了',exact:true}).count())await page.getByRole('button',{name:'変更を破棄して終了',exact:true}).click();await page.reload();await page.locator('.menu-list').waitFor();assert.equal(await page.locator('.menu-row').filter({hasText:'きつねうどん'}).count(),0);
  assert.deepEqual(errors,[]);console.log(`PASS ${engine}: fixed desktop detail across 3 articles/3 designs/4 widths/2 heights, scroll/mobile close, consecutive reorder and one final confirmation`);
 } finally {await browser.close();}
